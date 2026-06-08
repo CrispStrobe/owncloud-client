@@ -134,6 +134,19 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="deltaSyncCheckBox">
+              <property name="toolTip">
+               <string>When enabled and the CrispCloud Delta Sync server app is installed, only changed blocks of large files are uploaded instead of the entire file.</string>
+              </property>
+              <property name="text">
+               <string>Enable block-level delta sync for large files</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
                <widget class="QPushButton" name="ignoredFilesButton">

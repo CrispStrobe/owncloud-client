@@ -39,6 +39,13 @@ ProtocolItem::ProtocolItem(Folder *folder, const SyncFileItemPtr &item)
     if (_message.isEmpty()) {
         _message = Progress::asResultString(*item);
     }
+    // Append delta sync savings info if available
+    if (!item->_messageString.isEmpty()) {
+        if (!_message.isEmpty()) {
+            _message += QStringLiteral(" — ");
+        }
+        _message += item->_messageString;
+    }
 }
 
 QString ProtocolItem::path() const

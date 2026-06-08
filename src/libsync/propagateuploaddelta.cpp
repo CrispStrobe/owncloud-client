@@ -312,10 +312,13 @@ void PropagateUploadFileDelta::slotFinalizeFinished()
         ? (1.0 - static_cast<double>(transferredBytes) / totalBytes) * 100.0
         : 0.0;
 
+    _item->_messageString = QStringLiteral("Delta sync: %1/%2 blocks, %3% bandwidth saved")
+        .arg(_changedBlocks.size())
+        .arg(_localBlockMap.blockCount)
+        .arg(QString::number(savings, 'f', 1));
+
     qCInfo(lcPropagateUploadDelta) << "Delta sync completed for" << _item->_file
-        << "— uploaded" << _changedBlocks.size() << "/" << _localBlockMap.blockCount
-        << "blocks," << transferredBytes << "/" << totalBytes << "bytes"
-        << "(" << QString::number(savings, 'f', 1) << "% bandwidth saved)";
+        << "—" << _item->_messageString;
     finalize();
 }
 

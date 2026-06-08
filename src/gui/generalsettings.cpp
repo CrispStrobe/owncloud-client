@@ -69,6 +69,11 @@ GeneralSettings::GeneralSettings(QWidget *parent)
          Q_EMIT moveToTrashChanged(checked);
      });*/
 
+    _ui->deltaSyncCheckBox->setChecked(ConfigFile().deltaSyncEnabled());
+    connect(_ui->deltaSyncCheckBox, &QCheckBox::toggled, this, [](bool checked) {
+        ConfigFile().setDeltaSyncEnabled(checked);
+    });
+
     // OEM themes are not obliged to ship mono icons, so there
     // is no point in offering an option
     _ui->monoIconsCheckBox->setVisible(Resources::hasMonoTheme());
