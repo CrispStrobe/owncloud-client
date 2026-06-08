@@ -4,7 +4,17 @@
 >
 > When the [CrispCloud Delta Sync](https://github.com/CrispStrobe/crispcloud-delta-sync) server app is installed on your ownCloud 10, this client uploads only the 4 MB blocks that actually changed — instead of re-uploading entire files.
 >
-> **Branch:** `delta-sync` | **Status:** CI-verified on Linux, Windows, macOS
+> **Branch:** `delta-sync` | **Status:** CI-verified on Linux, Windows, macOS | **[Download binaries](https://github.com/CrispStrobe/owncloud-client/releases/tag/delta-sync-latest)**
+
+## Download
+
+Pre-built binaries are available from the [Releases page](https://github.com/CrispStrobe/owncloud-client/releases/tag/delta-sync-latest):
+
+- **Linux:** AppImage (x86_64)
+- **Windows:** Installer/EXE (x86_64, MSVC 2022)
+- **macOS:** DMG (ARM64)
+
+These are built automatically from the `delta-sync` branch on every push.
 
 ## What's different from upstream
 
