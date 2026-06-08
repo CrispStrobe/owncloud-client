@@ -18,6 +18,9 @@ jobs:
     container: owncloudci/appimage-build:sles15-amd64
     permissions:
       contents: read
+    env:
+      CRAFT_TARGET: linux-64-gcc
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
