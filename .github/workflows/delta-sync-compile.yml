@@ -1,7 +1,8 @@
-name: Delta Sync Compile Check
+name: Delta Sync Build & Release
 on:
   push:
     branches: [delta-sync]
+    tags: ['v*']
   pull_request:
     branches: [master]
 
@@ -9,32 +10,56 @@ concurrency:
   group: delta-sync-${{ github.ref }}
   cancel-in-progress: true
 
-permissions: {}
+permissions:
+  contents: write
 
 defaults:
   run:
     shell: pwsh
 
 jobs:
-  build-linux:
-    name: Linux GCC compile
-    runs-on: ubuntu-latest
-    container: owncloudci/appimage-build:sles15-amd64
-    permissions:
-      contents: read
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc-x86_64
+            target: linux-64-gcc
+            os: ubuntu-latest
+            container: owncloudci/appimage-build:sles15-amd64
+          - name: windows-msvc-x86_64
+            target: windows-cl-msvc2022-x86_64
+            os: windows-latest
+            container:
+          - name: macos-clang-arm64
+            target: macos-clang-arm64
+            os: macos-latest
+            container:
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    continue-on-error: ${{ matrix.name == 'macos-clang-arm64' }}
+
     env:
-      CRAFT_TARGET: linux-64-gcc
+      CRAFT_TARGET: ${{ matrix.target }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
+      - uses: actions/setup-python@v5
+        if: matrix.name != 'linux-gcc-x86_64'
+        with:
+          python-version: '3.12'
+
       - name: Restore cache
         uses: actions/cache@v4
         with:
           path: ~/cache
-          key: ${{ runner.os }}-linux-64-gcc
+          key: ${{ runner.os }}-${{ matrix.target }}
 
       - name: Clone CraftMaster
         run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
@@ -50,8 +75,12 @@ jobs:
 
       - name: Prepare
         run: |
+          New-Item -ItemType Directory "${env:GITHUB_WORKSPACE}/binaries/" -ErrorAction SilentlyContinue
           & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set forceAsserts=true owncloud/owncloud-client
           & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set srcDir="${env:GITHUB_WORKSPACE}" owncloud/owncloud-client
+          if ($IsLinux) {
+              & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c dev-utils/linuxdeploy
+          }
 
       - name: Install dependencies
         run: |
@@ -65,107 +94,49 @@ jobs:
         run: |
           & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache --test owncloud/owncloud-client
 
-  build-windows:
-    name: Windows MSVC compile
-    runs-on: windows-latest
-    permissions:
-      contents: read
-    env:
-      CRAFT_TARGET: windows-cl-msvc2022-x86_64
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache --package owncloud/owncloud-client
+
+      - name: Collect artifacts
+        run: |
+          Copy-Item "$env:HOME/craft/binaries/*" "${env:GITHUB_WORKSPACE}/binaries/" -ErrorAction SilentlyContinue
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: owncloud-delta-sync-${{ matrix.name }}
+          path: ${{ github.workspace }}/binaries/*
+
+  release:
+    name: Create Release
+    needs: [build]
+    if: github.ref == 'refs/heads/delta-sync'
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          fetch-depth: 1
+          path: artifacts
 
-      - uses: actions/setup-python@v5
+      - name: List artifacts
+        run: find artifacts -type f | head -50
+        shell: bash
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
         with:
-          python-version: '3.12'
+          tag_name: delta-sync-latest
+          name: "ownCloud Desktop — Delta Sync (latest build)"
+          body: |
+            **ownCloud desktop client with block-level delta sync.**
 
-      - name: Restore cache
-        uses: actions/cache@v4
-        with:
-          path: ~/cache
-          key: ${{ runner.os }}-windows-cl-msvc2022-x86_64
+            When the [crispcloud_delta](https://github.com/CrispStrobe/crispcloud-delta-sync) server app is installed, this client uploads only changed 4 MB blocks instead of full files.
 
-      - name: Clone CraftMaster
-        run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
+            - Settings toggle: General Settings > "Enable block-level delta sync"
+            - Activity display shows per-file bandwidth savings
 
-      - name: Craft setup
-        run: |
-          New-Item -Path ~/cache -ItemType Directory -ErrorAction SilentlyContinue
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" --setup
-
-      - name: Craft unshelve
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --unshelve "${env:GITHUB_WORKSPACE}/.craft.shelf"
-
-      - name: Prepare
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set forceAsserts=true owncloud/owncloud-client
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set srcDir="${env:GITHUB_WORKSPACE}" owncloud/owncloud-client
-
-      - name: Install dependencies
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --install-deps owncloud/owncloud-client
-
-      - name: Build
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache owncloud/owncloud-client
-
-      - name: Run tests (Windows)
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache --test owncloud/owncloud-client
-
-  build-macos:
-    name: macOS Clang compile
-    runs-on: macos-latest
-    continue-on-error: true  # macOS Craft deps may fail due to upstream mirrors
-    permissions:
-      contents: read
-    env:
-      CRAFT_TARGET: macos-clang-arm64
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Restore cache
-        uses: actions/cache@v4
-        with:
-          path: ~/cache
-          key: ${{ runner.os }}-macos-clang-arm64
-
-      - name: Clone CraftMaster
-        run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
-
-      - name: Craft setup
-        run: |
-          New-Item -Path ~/cache -ItemType Directory -ErrorAction SilentlyContinue
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" --setup
-
-      - name: Craft unshelve
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --unshelve "${env:GITHUB_WORKSPACE}/.craft.shelf"
-
-      - name: Prepare
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set forceAsserts=true owncloud/owncloud-client
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set srcDir="${env:GITHUB_WORKSPACE}" owncloud/owncloud-client
-
-      - name: Install dependencies
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --install-deps owncloud/owncloud-client
-
-      - name: Build
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache owncloud/owncloud-client
-
-      - name: Run tests (macOS)
-        run: |
-          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache --test owncloud/owncloud-client
+            Built from `delta-sync` branch, commit ${{ github.sha }}.
+          draft: false
+          prerelease: true
+          files: artifacts/**/*
+          make_latest: false
