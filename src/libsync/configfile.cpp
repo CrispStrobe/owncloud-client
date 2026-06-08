@@ -167,6 +167,19 @@ void ConfigFile::setOptionalDesktopNotifications(bool show)
     settings.sync();
 }
 
+bool ConfigFile::deltaSyncEnabled() const
+{
+    auto settings = makeQSettings();
+    return settings.value(QStringLiteral("deltaSyncEnabled"), true).toBool();
+}
+
+void ConfigFile::setDeltaSyncEnabled(bool enabled)
+{
+    auto settings = makeQSettings();
+    settings.setValue(QStringLiteral("deltaSyncEnabled"), enabled);
+    settings.sync();
+}
+
 void ConfigFile::saveGeometry(QWidget *w)
 {
     OC_ASSERT(!w->objectName().isNull());

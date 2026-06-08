@@ -129,6 +129,11 @@ public:
     bool optionalDesktopNotifications() const;
     void setOptionalDesktopNotifications(bool show);
 
+    /** Whether block-level delta sync is enabled for large files.
+     *  Requires the crispcloud_delta server app to be installed. */
+    bool deltaSyncEnabled() const;
+    void setDeltaSyncEnabled(bool enabled);
+
     std::optional<QStringList> issuesWidgetFilter() const;
     void setIssuesWidgetFilter(const QStringList &checked);
 

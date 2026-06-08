@@ -302,7 +302,20 @@ void PropagateUploadFileDelta::slotFinalizeFinished()
     int httpCode = job->reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     if (httpCode != 200) { fallbackToNormalUpload(); return; }
 
-    qCInfo(lcPropagateUploadDelta) << "Delta sync completed for" << _item->_file;
+    qint64 totalBytes = _localBlockMap.totalSize;
+    qint64 transferredBytes = 0;
+    for (int idx : _changedBlocks) {
+        if (idx < _localBlockMap.signatures.size())
+            transferredBytes += _localBlockMap.signatures[idx].size;
+    }
+    double savings = totalBytes > 0
+        ? (1.0 - static_cast<double>(transferredBytes) / totalBytes) * 100.0
+        : 0.0;
+
+    qCInfo(lcPropagateUploadDelta) << "Delta sync completed for" << _item->_file
+        << "— uploaded" << _changedBlocks.size() << "/" << _localBlockMap.blockCount
+        << "blocks," << transferredBytes << "/" << totalBytes << "bytes"
+        << "(" << QString::number(savings, 'f', 1) << "% bandwidth saved)";
     finalize();
 }
 
