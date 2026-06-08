@@ -148,7 +148,7 @@ void PropagateUploadFileDelta::doStartUpload()
 
     // SimpleNetworkJob(Account*, QUrl rootUrl, QString path, QByteArray verb,
     //                  QIODevice* body=nullptr, QNetworkRequest req={}, QObject* parent=nullptr)
-    auto *job = new SimpleNetworkJob(propagator()->account().data(), rootUrl, statusPath,
+    auto *job = new SimpleNetworkJob(propagator()->account(), rootUrl, statusPath,
         "GET", static_cast<QIODevice *>(nullptr), QNetworkRequest{}, this);
     connect(job, &SimpleNetworkJob::finishedSignal, this, &PropagateUploadFileDelta::slotStatusCheckFinished);
     job->start();
@@ -182,7 +182,7 @@ void PropagateUploadFileDelta::slotStatusCheckFinished()
     auto rootUrl = propagator()->account()->url();
     auto bmPath = _deltaAppBase + QStringLiteral("/api/blockmap/") + _item->_file;
 
-    auto *bmJob = new SimpleNetworkJob(propagator()->account().data(), rootUrl, bmPath,
+    auto *bmJob = new SimpleNetworkJob(propagator()->account(), rootUrl, bmPath,
         "GET", static_cast<QIODevice *>(nullptr), QNetworkRequest{}, this);
     connect(bmJob, &SimpleNetworkJob::finishedSignal, this, &PropagateUploadFileDelta::slotBlockMapFetched);
     bmJob->start();
@@ -241,7 +241,7 @@ void PropagateUploadFileDelta::uploadNextBlock()
         QNetworkRequest req;
         req.setRawHeader("OCS-APIREQUEST", "true");
 
-        auto *finalizeJob = new SimpleNetworkJob(propagator()->account().data(), rootUrl, finalizePath,
+        auto *finalizeJob = new SimpleNetworkJob(propagator()->account(), rootUrl, finalizePath,
             "POST", static_cast<QIODevice *>(nullptr), req, this);
         connect(finalizeJob, &SimpleNetworkJob::finishedSignal, this, &PropagateUploadFileDelta::slotFinalizeFinished);
         finalizeJob->start();
@@ -272,7 +272,7 @@ void PropagateUploadFileDelta::uploadNextBlock()
     req.setRawHeader("OCS-APIREQUEST", "true");
 
     // Use the QByteArray&& overload for block data
-    auto *putJob = new SimpleNetworkJob(propagator()->account().data(), rootUrl, blockPath,
+    auto *putJob = new SimpleNetworkJob(propagator()->account(), rootUrl, blockPath,
         "POST", std::move(blockData), req, this);
     connect(putJob, &SimpleNetworkJob::finishedSignal, this, &PropagateUploadFileDelta::slotBlockUploaded);
     putJob->start();
