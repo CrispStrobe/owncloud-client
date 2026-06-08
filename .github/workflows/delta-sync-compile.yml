@@ -120,6 +120,7 @@ jobs:
   build-macos:
     name: macOS Clang compile
     runs-on: macos-latest
+    continue-on-error: true  # macOS Craft deps may fail due to upstream mirrors
     permissions:
       contents: read
     env:
