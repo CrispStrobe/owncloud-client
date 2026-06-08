@@ -28,6 +28,8 @@ set(libsync_SRCS
     propagateuploadcommon.cpp
     propagateuploadfile.cpp
     propagateuploadtus.cpp
+    propagateuploaddelta.h
+    propagateuploaddelta.cpp
     propagateremotedelete.cpp
     propagateremotemove.cpp
     propagateremotemkdir.cpp

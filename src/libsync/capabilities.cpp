@@ -120,6 +120,11 @@ const SpaceSupport &Capabilities::spacesSupport() const
     return _spaces;
 }
 
+bool Capabilities::deltaSyncAvailable() const
+{
+    return _capabilities.contains(QStringLiteral("crispcloud_delta"));
+}
+
 bool Capabilities::privateLinkPropertyAvailable() const
 {
     return _capabilities.value(QStringLiteral("files")).toMap().value(QStringLiteral("privateLinks")).toBool();

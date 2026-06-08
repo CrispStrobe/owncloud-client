@@ -26,6 +26,7 @@
 #include "propagateremotemkdir.h"
 #include "propagateremotemove.h"
 #include "propagateuploadfile.h"
+#include "propagateuploaddelta.h"
 #include "propagateuploadtus.h"
 #include "propagatorjobs.h"
 #include "vio/csync_vio_local.h"
@@ -344,6 +345,13 @@ PropagateItemJob *OwncloudPropagator::createJob(const SyncFileItemPtr &item)
         if (item->_direction != SyncFileItem::Up) {
             auto job = new PropagateDownloadFile(this, item);
             job->setDeleteExistingFolder(deleteExisting);
+            return job;
+        }
+        // Try block-level delta sync for large files when the server app is available
+        static constexpr qint64 deltaSyncMinSize = 10 * 1024 * 1024; // 10 MB
+        if (item->_size >= deltaSyncMinSize && account()->capabilities().deltaSyncAvailable()) {
+            auto job = new PropagateUploadFileDelta(this, item);
+            job->setDeleteExisting(deleteExisting);
             return job;
         }
         if (account()->capabilities().tusSupport().isValid()) {

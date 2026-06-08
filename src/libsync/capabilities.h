@@ -165,6 +165,9 @@ public:
     const TusSupport &tusSupport() const;
     const SpaceSupport &spacesSupport() const;
 
+    /// Whether the crispcloud_delta app is available for block-level delta sync
+    bool deltaSyncAvailable() const;
+
     /// Whether the "privatelink" DAV property is available
     bool privateLinkPropertyAvailable() const;
 
