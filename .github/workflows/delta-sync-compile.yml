@@ -13,7 +13,7 @@ defaults:
 
 jobs:
   build-linux:
-    name: Linux GCC compile (delta-sync)
+    name: Linux GCC compile
     runs-on: ubuntu-latest
     container: owncloudci/appimage-build:sles15-amd64
     permissions:
@@ -31,6 +31,58 @@ jobs:
         with:
           path: ~/cache
           key: ${{ runner.os }}-linux-64-gcc
+
+      - name: Clone CraftMaster
+        run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
+
+      - name: Craft setup
+        run: |
+          New-Item -Path ~/cache -ItemType Directory -ErrorAction SilentlyContinue
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" --setup
+
+      - name: Craft unshelve
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --unshelve "${env:GITHUB_WORKSPACE}/.craft.shelf"
+
+      - name: Prepare
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set forceAsserts=true owncloud/owncloud-client
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set srcDir="${env:GITHUB_WORKSPACE}" owncloud/owncloud-client
+
+      - name: Install dependencies
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --install-deps owncloud/owncloud-client
+
+      - name: Build
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache owncloud/owncloud-client
+
+      - name: Run tests
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache --test owncloud/owncloud-client
+
+  build-windows:
+    name: Windows MSVC compile
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    env:
+      CRAFT_TARGET: windows-cl-msvc2022-x86_64
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: ~/cache
+          key: ${{ runner.os }}-windows-cl-msvc2022-x86_64
 
       - name: Clone CraftMaster
         run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
