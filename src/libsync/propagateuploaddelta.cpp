@@ -133,8 +133,9 @@ QVector<int> PropagateUploadFileDelta::findChangedBlocks(const BlockMap &local, 
 
 void PropagateUploadFileDelta::doStartUpload()
 {
-    if (_fileToUpload._size < MinDeltaSyncSize) {
-        qCInfo(lcPropagateUploadDelta) << "File too small for delta sync:" << _fileToUpload._size;
+    // Use _item->_size instead of _fileToUpload (ownCloud base class doesn't have it)
+    if (_item->_size < MinDeltaSyncSize) {
+        qCInfo(lcPropagateUploadDelta) << "File too small for delta sync:" << _item->_size;
         fallbackToNormalUpload();
         return;
     }
@@ -142,11 +143,13 @@ void PropagateUploadFileDelta::doStartUpload()
     _deltaAppBase = QStringLiteral("/index.php/apps/crispcloud_delta");
 
     // Probe the server for the crispcloud_delta app
-    auto url = propagator()->account()->url();
+    auto rootUrl = propagator()->account()->url();
     auto statusPath = _deltaAppBase + QStringLiteral("/api/status");
 
-    auto *job = new SimpleNetworkJob(propagator()->account().data(), url, statusPath,
-        "GET", QNetworkRequest{}, this);
+    // SimpleNetworkJob(Account*, QUrl rootUrl, QString path, QByteArray verb,
+    //                  QIODevice* body=nullptr, QNetworkRequest req={}, QObject* parent=nullptr)
+    auto *job = new SimpleNetworkJob(propagator()->account().data(), rootUrl, statusPath,
+        "GET", static_cast<QIODevice *>(nullptr), QNetworkRequest{}, this);
     connect(job, &SimpleNetworkJob::finishedSignal, this, &PropagateUploadFileDelta::slotStatusCheckFinished);
     job->start();
 }
@@ -176,11 +179,11 @@ void PropagateUploadFileDelta::slotStatusCheckFinished()
     qCInfo(lcPropagateUploadDelta) << "Delta sync app detected, fetching block map for" << _item->_file;
 
     // Fetch remote block map
-    auto url = propagator()->account()->url();
+    auto rootUrl = propagator()->account()->url();
     auto bmPath = _deltaAppBase + QStringLiteral("/api/blockmap/") + _item->_file;
 
-    auto *bmJob = new SimpleNetworkJob(propagator()->account().data(), url, bmPath,
-        "GET", QNetworkRequest{}, this);
+    auto *bmJob = new SimpleNetworkJob(propagator()->account().data(), rootUrl, bmPath,
+        "GET", static_cast<QIODevice *>(nullptr), QNetworkRequest{}, this);
     connect(bmJob, &SimpleNetworkJob::finishedSignal, this, &PropagateUploadFileDelta::slotBlockMapFetched);
     bmJob->start();
 }
@@ -201,7 +204,9 @@ void PropagateUploadFileDelta::slotBlockMapFetched()
     if (_remoteBlockMap.blockCount == 0) { fallbackToNormalUpload(); return; }
 
     qint64 blockSize = _remoteBlockMap.blockSize > 0 ? _remoteBlockMap.blockSize : DefaultBlockSize;
-    _localBlockMap = computeLocalBlockMap(_fileToUpload._path, blockSize);
+    // Use propagator()->fullLocalPath() instead of _fileToUpload._path
+    QString localPath = propagator()->fullLocalPath(_item->_file);
+    _localBlockMap = computeLocalBlockMap(localPath, blockSize);
     if (_localBlockMap.blockCount == 0) { fallbackToNormalUpload(); return; }
 
     _changedBlocks = findChangedBlocks(_localBlockMap, _remoteBlockMap);
@@ -231,13 +236,13 @@ void PropagateUploadFileDelta::uploadNextBlock()
 {
     if (_currentBlockIndex >= _changedBlocks.size()) {
         // All blocks uploaded — finalize
-        auto url = propagator()->account()->url();
+        auto rootUrl = propagator()->account()->url();
         auto finalizePath = _deltaAppBase + QStringLiteral("/api/finalize/") + _item->_file;
         QNetworkRequest req;
         req.setRawHeader("OCS-APIREQUEST", "true");
 
-        auto *finalizeJob = new SimpleNetworkJob(propagator()->account().data(), url, finalizePath,
-            "POST", req, this);
+        auto *finalizeJob = new SimpleNetworkJob(propagator()->account().data(), rootUrl, finalizePath,
+            "POST", static_cast<QIODevice *>(nullptr), req, this);
         connect(finalizeJob, &SimpleNetworkJob::finishedSignal, this, &PropagateUploadFileDelta::slotFinalizeFinished);
         finalizeJob->start();
         return;
@@ -248,14 +253,16 @@ void PropagateUploadFileDelta::uploadNextBlock()
 
     const BlockSignature &sig = _localBlockMap.signatures[blockIdx];
 
-    QFile file(_fileToUpload._path);
+    // Use propagator()->fullLocalPath() instead of _fileToUpload._path
+    QString localPath = propagator()->fullLocalPath(_item->_file);
+    QFile file(localPath);
     if (!file.open(QIODevice::ReadOnly)) { fallbackToNormalUpload(); return; }
     file.seek(sig.offset);
     QByteArray blockData = file.read(sig.size);
     file.close();
     if (blockData.size() != sig.size) { fallbackToNormalUpload(); return; }
 
-    auto url = propagator()->account()->url();
+    auto rootUrl = propagator()->account()->url();
     auto blockPath = _deltaAppBase + QStringLiteral("/api/blocks/") + _item->_file
         + QStringLiteral("?offset=") + QString::number(sig.offset)
         + QStringLiteral("&size=") + QString::number(sig.size);
@@ -264,7 +271,8 @@ void PropagateUploadFileDelta::uploadNextBlock()
     req.setRawHeader("Content-Type", "application/octet-stream");
     req.setRawHeader("OCS-APIREQUEST", "true");
 
-    auto *putJob = new SimpleNetworkJob(propagator()->account().data(), url, blockPath,
+    // Use the QByteArray&& overload for block data
+    auto *putJob = new SimpleNetworkJob(propagator()->account().data(), rootUrl, blockPath,
         "POST", std::move(blockData), req, this);
     connect(putJob, &SimpleNetworkJob::finishedSignal, this, &PropagateUploadFileDelta::slotBlockUploaded);
     putJob->start();
