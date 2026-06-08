@@ -1,4 +1,37 @@
-# ownCloud Desktop Client
+# ownCloud Desktop Client — Delta Sync Fork
+
+> **This is a fork of [owncloud/client](https://github.com/owncloud/client) that adds block-level delta sync.**
+>
+> When the [CrispCloud Delta Sync](https://github.com/CrispStrobe/crispcloud-delta-sync) server app is installed on your ownCloud 10, this client uploads only the 4 MB blocks that actually changed — instead of re-uploading entire files.
+>
+> **Branch:** `delta-sync` | **Status:** CI-verified on Linux, Windows, macOS
+
+## What's different from upstream
+
+| Feature | Upstream | This fork |
+|---------|----------|-----------|
+| Large file upload | Full re-upload or TUS | Block-level delta (Adler-32 + SHA-256 per 4 MB block) |
+| Settings toggle | N/A | General Settings > "Enable block-level delta sync for large files" |
+| Activity display | Standard sync message | Appends "Delta sync: 2/125 blocks, 98.4% bandwidth saved" |
+| Logging | N/A | Full category logging under `lcPropagateUploadDelta` |
+| Fallback | N/A | Graceful fallback to TUS or simple PUT if server app unavailable |
+
+### Requirements
+
+- **Server:** Install the [crispcloud_delta](https://github.com/CrispStrobe/crispcloud-delta-sync) ownCloud app (compatible with ownCloud 10.11+)
+- **File size:** Delta sync activates for files >= 10 MB
+- **Note:** ownCloud Infinite Scale (oCIS) is not supported (Go-based, no PHP apps)
+
+### Files changed
+
+- `src/libsync/propagateuploaddelta.h/.cpp` — new `PropagateUploadFileDelta` class
+- `src/libsync/capabilities.h/.cpp` — `deltaSyncAvailable()` capability check
+- `src/libsync/configfile.h/.cpp` — `deltaSyncEnabled()` settings toggle
+- `src/libsync/owncloudpropagator.cpp` — integration into upload job creation
+- `src/gui/generalsettings.ui/.cpp` — settings checkbox
+- `src/gui/protocolitem.cpp` — activity display with savings info
+
+---
 
 [![Build Status](https://drone.owncloud.com/api/badges/owncloud/client/status.svg)](https://drone.owncloud.com/owncloud/client) [![Build Status](https://github.com/owncloud/client/workflows/ownCloud%20CI/badge.svg)](https://github.com/owncloud/client/actions)
 
