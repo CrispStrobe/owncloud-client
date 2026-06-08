@@ -5,6 +5,10 @@ on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: delta-sync-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions: {}
 
 defaults:
