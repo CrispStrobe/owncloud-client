@@ -1,0 +1,59 @@
+name: Delta Sync Compile Check
+on:
+  push:
+    branches: [delta-sync]
+  pull_request:
+    branches: [master]
+
+permissions: {}
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build-linux:
+    name: Linux GCC compile (delta-sync)
+    runs-on: ubuntu-latest
+    container: owncloudci/appimage-build:sles15-amd64
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: ~/cache
+          key: ${{ runner.os }}-linux-64-gcc
+
+      - name: Clone CraftMaster
+        run: git clone --depth=1 https://invent.kde.org/kde/craftmaster.git "$env:HOME/craft/CraftMaster/CraftMaster"
+
+      - name: Craft setup
+        run: |
+          New-Item -Path ~/cache -ItemType Directory -ErrorAction SilentlyContinue
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" --setup
+
+      - name: Craft unshelve
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --unshelve "${env:GITHUB_WORKSPACE}/.craft.shelf"
+
+      - name: Prepare
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set forceAsserts=true owncloud/owncloud-client
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --set srcDir="${env:GITHUB_WORKSPACE}" owncloud/owncloud-client
+
+      - name: Install dependencies
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --install-deps owncloud/owncloud-client
+
+      - name: Build
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache owncloud/owncloud-client
+
+      - name: Run tests
+        run: |
+          & "${env:GITHUB_WORKSPACE}/.github/workflows/.craft.ps1" -c --no-cache --test owncloud/owncloud-client
