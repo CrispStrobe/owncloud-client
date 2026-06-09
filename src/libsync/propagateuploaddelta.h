@@ -52,6 +52,12 @@ public:
 public slots:
     void abort(PropagatorJob::AbortType abortType) override;
 
+public:
+    static quint32 adler32(const QByteArray &data);
+    static BlockMap computeLocalBlockMap(const QString &filePath, qint64 blockSize);
+    static BlockMap parseServerBlockMap(const QByteArray &json);
+    static QVector<int> findChangedBlocks(const BlockMap &local, const BlockMap &remote);
+
 private slots:
     void slotStatusCheckFinished();
     void slotBlockMapFetched();
@@ -59,10 +65,6 @@ private slots:
     void slotFinalizeFinished();
 
 private:
-    static quint32 adler32(const QByteArray &data);
-    BlockMap computeLocalBlockMap(const QString &filePath, qint64 blockSize);
-    static BlockMap parseServerBlockMap(const QByteArray &json);
-    static QVector<int> findChangedBlocks(const BlockMap &local, const BlockMap &remote);
     void fallbackToNormalUpload();
     void uploadNextBlock();
 
