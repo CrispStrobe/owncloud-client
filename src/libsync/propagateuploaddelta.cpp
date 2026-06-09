@@ -26,7 +26,7 @@
 
 namespace OCC {
 
-Q_LOGGING_CATEGORY(lcPropagateUploadDelta, "nextcloud.sync.propagator.upload.delta", QtInfoMsg)
+Q_LOGGING_CATEGORY(lcPropagateUploadDelta, "owncloud.sync.propagator.upload.delta", QtInfoMsg)
 
 static constexpr quint32 AdlerMod = 65521;
 
@@ -237,7 +237,8 @@ void PropagateUploadFileDelta::uploadNextBlock()
     if (_currentBlockIndex >= _changedBlocks.size()) {
         // All blocks uploaded — finalize
         auto rootUrl = propagator()->account()->url();
-        auto finalizePath = _deltaAppBase + QStringLiteral("/api/finalize/") + _item->_file;
+        auto finalizePath = _deltaAppBase + QStringLiteral("/api/finalize/") + _item->_file
+            + QStringLiteral("?size=") + QString::number(_localBlockMap.totalSize);
         QNetworkRequest req;
         req.setRawHeader("OCS-APIREQUEST", "true");
 
