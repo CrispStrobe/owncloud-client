@@ -29,9 +29,9 @@ These are built automatically from the `delta-sync` branch on every push.
 
 ### Requirements
 
-- **Server:** Install the [crispcloud_delta](https://github.com/CrispStrobe/crispcloud-delta-sync) ownCloud app (compatible with ownCloud 10.11+, tested on OC 10.15 / PHP 7.4)
+- **Server:** Install the [crispcloud_delta](https://github.com/CrispStrobe/crispcloud-delta-sync) app — PHP for ownCloud 10.11+, or the [Go sidecar](https://github.com/CrispStrobe/crispcloud-delta-sync/tree/main/ocis) for oCIS v5+
 - **File size:** Delta sync activates for files >= 10 MB
-- **Note:** ownCloud Infinite Scale (oCIS) is not supported (Go-based, no PHP apps)
+- **Note:** ownCloud Infinite Scale (oCIS) requires the Go sidecar extension instead of the PHP app
 
 ### Files changed
 
