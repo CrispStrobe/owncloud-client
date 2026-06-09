@@ -23,12 +23,13 @@ These are built automatically from the `delta-sync` branch on every push.
 | Large file upload | Full re-upload or TUS | Block-level delta (Adler-32 + SHA-256 per 4 MB block) |
 | Settings toggle | N/A | General Settings > "Enable block-level delta sync for large files" |
 | Activity display | Standard sync message | Appends "Delta sync: 2/125 blocks, 98.4% bandwidth saved" |
-| Logging | N/A | Full category logging under `lcPropagateUploadDelta` |
+| Logging | N/A | Full category logging under `owncloud.sync.propagator.upload.delta` |
 | Fallback | N/A | Graceful fallback to TUS or simple PUT if server app unavailable |
+| File shrink | Re-upload corrupts tail | Finalize sends `?size=N`; server truncates to exact new size |
 
 ### Requirements
 
-- **Server:** Install the [crispcloud_delta](https://github.com/CrispStrobe/crispcloud-delta-sync) ownCloud app (compatible with ownCloud 10.11+)
+- **Server:** Install the [crispcloud_delta](https://github.com/CrispStrobe/crispcloud-delta-sync) ownCloud app (compatible with ownCloud 10.11+, tested on OC 10.15 / PHP 7.4)
 - **File size:** Delta sync activates for files >= 10 MB
 - **Note:** ownCloud Infinite Scale (oCIS) is not supported (Go-based, no PHP apps)
 
@@ -40,6 +41,7 @@ These are built automatically from the `delta-sync` branch on every push.
 - `src/libsync/owncloudpropagator.cpp` — integration into upload job creation
 - `src/gui/generalsettings.ui/.cpp` — settings checkbox
 - `src/gui/protocolitem.cpp` — activity display with savings info
+- `test/testdeltasync.cpp` — 11 unit tests (Adler-32 correctness, block map construction, diff logic, JSON parsing)
 
 ---
 
