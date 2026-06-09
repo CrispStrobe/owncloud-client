@@ -36,9 +36,9 @@ private slots:
     {
         // Verify C++ adler32 matches the PHP implementation in BlockMapService.
         // PHP: $a=1; $b=0; for each byte: $a=($a+ord)%65521; $b=($b+$a)%65521; return ($b<<16)|$a
-        // For "hello": expected 0x062C0205
+        // For "hello": expected 0x062C0215
         QByteArray data = "hello";
-        QCOMPARE(PropagateUploadFileDelta::adler32(data), static_cast<quint32>(0x062C0205));
+        QCOMPARE(PropagateUploadFileDelta::adler32(data), static_cast<quint32>(0x062C0215));
     }
 
     void testComputeBlockMapSingleBlock()
