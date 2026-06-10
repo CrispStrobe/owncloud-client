@@ -51,7 +51,7 @@ if (WITH_AUTO_UPDATER)
     owncloud_add_test(Updater)
 endif()
 
-owncloud_add_test(DeltaSync)
+owncloud_add_test(DeltaSync "${CMAKE_SOURCE_DIR}/src/libsync/propagateuploaddelta.cpp")
 
 owncloud_add_test(FolderWatcher)
 
