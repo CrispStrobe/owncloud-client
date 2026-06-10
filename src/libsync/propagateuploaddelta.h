@@ -16,29 +16,11 @@
 #pragma once
 
 #include "propagateuploadcommon.h"
-
-#include <QCryptographicHash>
+#include "deltasyncutils.h"
 
 namespace OCC {
 
 Q_DECLARE_LOGGING_CATEGORY(lcPropagateUploadDelta)
-
-struct BlockSignature {
-    int blockIndex = 0;
-    qint64 offset = 0;
-    qint64 size = 0;
-    quint32 weakHash = 0;
-    QByteArray strongHash;
-};
-
-struct BlockMap {
-    QString filePath;
-    qint64 totalSize = 0;
-    qint64 blockSize = 0;
-    int blockCount = 0;
-    QVector<BlockSignature> signatures;
-    QString etag;
-};
 
 class PropagateUploadFileDelta : public PropagateUploadCommon
 {
@@ -51,12 +33,6 @@ public:
 
 public slots:
     void abort(PropagatorJob::AbortType abortType) override;
-
-public:
-    static quint32 adler32(const QByteArray &data);
-    static BlockMap computeLocalBlockMap(const QString &filePath, qint64 blockSize);
-    static BlockMap parseServerBlockMap(const QByteArray &json);
-    static QVector<int> findChangedBlocks(const BlockMap &local, const BlockMap &remote);
 
 private slots:
     void slotStatusCheckFinished();

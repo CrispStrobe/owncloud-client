@@ -11,7 +11,7 @@
 #include <QTemporaryFile>
 #include <QCryptographicHash>
 
-#include "propagateuploaddelta.h"
+#include "deltasyncutils.h"
 
 using namespace OCC;
 
@@ -24,12 +24,12 @@ private slots:
     {
         // RFC 1950 example: adler32("Wikipedia") == 0x11E60398
         QByteArray data = "Wikipedia";
-        QCOMPARE(PropagateUploadFileDelta::adler32(data), static_cast<quint32>(0x11E60398));
+        QCOMPARE(DeltaSyncUtils::adler32(data), static_cast<quint32>(0x11E60398));
     }
 
     void testAdler32Empty()
     {
-        QCOMPARE(PropagateUploadFileDelta::adler32(QByteArray()), static_cast<quint32>(1));
+        QCOMPARE(DeltaSyncUtils::adler32(QByteArray()), static_cast<quint32>(1));
     }
 
     void testAdler32MatchesPhp()
@@ -38,7 +38,7 @@ private slots:
         // PHP: $a=1; $b=0; for each byte: $a=($a+ord)%65521; $b=($b+$a)%65521; return ($b<<16)|$a
         // For "hello": expected 0x062C0215
         QByteArray data = "hello";
-        QCOMPARE(PropagateUploadFileDelta::adler32(data), static_cast<quint32>(0x062C0215));
+        QCOMPARE(DeltaSyncUtils::adler32(data), static_cast<quint32>(0x062C0215));
     }
 
     void testComputeBlockMapSingleBlock()
@@ -49,14 +49,14 @@ private slots:
         tmp.write(content);
         tmp.flush();
 
-        BlockMap map = PropagateUploadFileDelta::computeLocalBlockMap(tmp.fileName(), 4 * 1024 * 1024);
+        BlockMap map = DeltaSyncUtils::computeLocalBlockMap(tmp.fileName(), 4 * 1024 * 1024);
         QCOMPARE(map.blockCount, 1);
         QCOMPARE(map.totalSize, static_cast<qint64>(content.size()));
         QCOMPARE(map.signatures.size(), 1);
         QCOMPARE(map.signatures[0].blockIndex, 0);
         QCOMPARE(map.signatures[0].offset, static_cast<qint64>(0));
         QCOMPARE(map.signatures[0].size, static_cast<qint64>(content.size()));
-        QCOMPARE(map.signatures[0].weakHash, PropagateUploadFileDelta::adler32(content));
+        QCOMPARE(map.signatures[0].weakHash, DeltaSyncUtils::adler32(content));
 
         QCryptographicHash sha(QCryptographicHash::Sha256);
         sha.addData(content);
@@ -76,7 +76,7 @@ private slots:
         tmp.write(content);
         tmp.flush();
 
-        BlockMap map = PropagateUploadFileDelta::computeLocalBlockMap(tmp.fileName(), blockSize);
+        BlockMap map = DeltaSyncUtils::computeLocalBlockMap(tmp.fileName(), blockSize);
         QCOMPARE(map.blockCount, 3);
         QCOMPARE(map.totalSize, static_cast<qint64>(content.size()));
         QCOMPARE(map.signatures.size(), 3);
@@ -89,7 +89,7 @@ private slots:
         QCOMPARE(map.signatures[2].size, static_cast<qint64>(content.size() - 2 * blockSize));
 
         QByteArray block0 = content.left(blockSize);
-        QCOMPARE(map.signatures[0].weakHash, PropagateUploadFileDelta::adler32(block0));
+        QCOMPARE(map.signatures[0].weakHash, DeltaSyncUtils::adler32(block0));
     }
 
     void testFindChangedBlocksNoneChanged()
@@ -106,7 +106,7 @@ private slots:
             remote.signatures.append(sig);
         }
 
-        QVector<int> changed = PropagateUploadFileDelta::findChangedBlocks(local, remote);
+        QVector<int> changed = DeltaSyncUtils::findChangedBlocks(local, remote);
         QVERIFY(changed.isEmpty());
     }
 
@@ -124,7 +124,7 @@ private slots:
         local.signatures[1].weakHash = 0xDEADBEEF;
         local.signatures[1].strongHash = "differenthash";
 
-        QVector<int> changed = PropagateUploadFileDelta::findChangedBlocks(local, remote);
+        QVector<int> changed = DeltaSyncUtils::findChangedBlocks(local, remote);
         QCOMPARE(changed.size(), 1);
         QCOMPARE(changed[0], 1);
     }
@@ -147,7 +147,7 @@ private slots:
         local.blockCount = 2;
         remote.blockCount = 3;
 
-        QVector<int> changed = PropagateUploadFileDelta::findChangedBlocks(local, remote);
+        QVector<int> changed = DeltaSyncUtils::findChangedBlocks(local, remote);
         QVERIFY(changed.isEmpty());
     }
 
@@ -167,7 +167,7 @@ private slots:
         local.blockCount = 3;
         remote.blockCount = 2;
 
-        QVector<int> changed = PropagateUploadFileDelta::findChangedBlocks(local, remote);
+        QVector<int> changed = DeltaSyncUtils::findChangedBlocks(local, remote);
         QCOMPARE(changed.size(), 1);
         QCOMPARE(changed[0], 2);
     }
@@ -176,7 +176,7 @@ private slots:
     {
         QByteArray a(4 * 1024 * 1024, 'X');
         QByteArray b(4 * 1024 * 1024, 'Y');
-        QVERIFY(PropagateUploadFileDelta::adler32(a) != PropagateUploadFileDelta::adler32(b));
+        QVERIFY(DeltaSyncUtils::adler32(a) != DeltaSyncUtils::adler32(b));
     }
 
     void testParseServerBlockMap()
@@ -193,7 +193,7 @@ private slots:
             ]
         })";
 
-        BlockMap map = PropagateUploadFileDelta::parseServerBlockMap(json);
+        BlockMap map = DeltaSyncUtils::parseServerBlockMap(json);
         QCOMPARE(map.filePath, QStringLiteral("/test.bin"));
         QCOMPARE(map.totalSize, static_cast<qint64>(8388608));
         QCOMPARE(map.blockSize, static_cast<qint64>(4194304));

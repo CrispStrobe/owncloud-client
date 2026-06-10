@@ -28,6 +28,8 @@ set(libsync_SRCS
     propagateuploadcommon.cpp
     propagateuploadfile.cpp
     propagateuploadtus.cpp
+    deltasyncutils.h
+    deltasyncutils.cpp
     propagateuploaddelta.h
     propagateuploaddelta.cpp
     propagateremotedelete.cpp
