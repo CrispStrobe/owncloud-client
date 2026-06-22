@@ -124,6 +124,14 @@ jobs:
         with:
           path: artifacts
 
+      - name: Deduplicate manifest files
+        run: |
+          # Craft produces manifest.json in each platform artifact.
+          # softprops/action-gh-release fails on duplicate asset names,
+          # so remove manifests — they aren't useful for end users.
+          find artifacts -name 'manifest*.json' -delete
+        shell: bash
+
       - name: List artifacts
         run: find artifacts -type f | head -50
         shell: bash
